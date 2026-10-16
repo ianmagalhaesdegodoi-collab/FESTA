@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "EventConfig": {
+      "title": "EventConfig",
+      "description": "Configurações gerais do evento, tema visual e regras",
+      "type": "object",
+      "properties": {
+        "eventName": { "type": "string", "maxLength": 150 },
+        "eventSubtitle": { "type": "string", "maxLength": 300 },
+        "eventDate": { "type": "string", "maxLength": 20 },
+        "eventTime": { "type": "string", "maxLength": 10 },
+        "venueName": { "type": "string", "maxLength": 150 },
+        "venueAddress": { "type": "string", "maxLength": 250 },
+        "minAge": { "type": "number" },
+        "totalCapacity": { "type": "number" },
+        "salesEnabled": { "type": "boolean" },
+        "simulatePaymentMode": { "type": "boolean" }
+      },
+      "required": ["eventName", "eventDate", "venueName", "totalCapacity"]
+    },
+    "TicketType": {
+      "title": "TicketType",
+      "description": "Tipos de ingressos disponíveis como Pista e Open Bar",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "price": { "type": "number" },
+        "maxQuantity": { "type": "number" },
+        "soldQuantity": { "type": "number" },
+        "batchName": { "type": "string", "maxLength": 50 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["name", "price", "maxQuantity"]
+    },
+    "WhatsAppGroup": {
+      "title": "WhatsAppGroup",
+      "description": "Grupos de WhatsApp com slugs para rastreamento de vendas",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 80 },
+        "visitsCount": { "type": "number" },
+        "salesCount": { "type": "number" },
+        "totalRevenue": { "type": "number" }
+      },
+      "required": ["name", "slug"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Pedidos de compra de ingressos",
+      "type": "object",
+      "properties": {
+        "customerName": { "type": "string", "maxLength": 150 },
+        "customerCpf": { "type": "string", "maxLength": 20 },
+        "customerEmail": { "type": "string", "maxLength": 150 },
+        "customerWhatsapp": { "type": "string", "maxLength": 30 },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "cancelled"] },
+        "originGroupSlug": { "type": "string", "maxLength": 80 }
+      },
+      "required": ["customerName", "customerCpf", "customerEmail", "customerWhatsapp", "totalAmount", "status"]
+    },
+    "Ticket": {
+      "title": "Ticket",
+      "description": "Ingresso individual gerado com QR Code único",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "maxLength": 80 },
+        "qrToken": { "type": "string", "maxLength": 128 },
+        "attendeeName": { "type": "string", "maxLength": 150 },
+        "attendeeCpf": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["valid", "used", "cancelled"] },
+        "ticketTypeName": { "type": "string", "maxLength": 100 },
+        "checkedInAt": { "type": "string", "maxLength": 50 },
+        "checkedInByName": { "type": "string", "maxLength": 100 }
+      },
+      "required": ["orderId", "qrToken", "attendeeName", "status"]
+    }
+  },
+  "firestore": {
+    "/event_config/{configId}": {
+      "schema": "EventConfig",
+      "description": "Documento único contendo parâmetros do evento e tema visual"
+    },
+    "/ticket_types/{ticketTypeId}": {
+      "schema": "TicketType",
+      "description": "Definição de preços e lotes de ingressos"
+    },
+    "/whatsapp_groups/{groupId}": {
+      "schema": "WhatsAppGroup",
+      "description": "Grupos de divulgação com métricas de conversão"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Pedidos e pagamentos Pix dos clientes"
+    },
+    "/tickets/{ticketId}": {
+      "schema": "Ticket",
+      "description": "Ingressos individuais escaneáveis na portaria"
+    }
+  }
+}

@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Bloqueio padrão universal (Zero-Trust)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isStaff() {
+      return isSignedIn() && (
+        isAdmin() || 
+        exists(/databases/$(database)/documents/staff/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Configuração do Evento: Leitura pública, escrita SOMENTE por Administrador
+    match /event_config/{configId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. Tipos e Lotes de Ingressos: Leitura pública, escrita SOMENTE por Administrador
+    match /ticket_types/{ticketTypeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. Grupos de WhatsApp: SOMENTE ADMIN tem acesso. Staff e clientes NÃO têm permissão de leitura ou escrita
+    match /whatsapp_groups/{groupId} {
+      allow read, write: if isAdmin();
+    }
+
+    // 4. Cliques / Visitas por grupo: Qualquer visitante pode registrar visita; leitura SOMENTE admin
+    match /group_visits/{visitId} {
+      allow create: if request.resource.data.keys().hasAll(['groupSlug', 'timestamp'])
+                    && request.resource.data.groupSlug is string
+                    && request.resource.data.groupSlug.size() <= 100;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // 5. Pedidos (Orders):
+    // Clientes criam pedido durante checkout. Leitura pública restrita ao portador (ou server proxy).
+    // Admin e Staff podem listar e ler pedidos.
+    match /orders/{orderId} {
+      allow create: if request.resource.data.keys().hasAll([
+        'customerName', 'customerCpf', 'customerEmail', 'customerWhatsapp', 
+        'ticketTypeId', 'quantity', 'totalAmount', 'status', 'createdAt'
+      ]) && request.resource.data.status in ['pending', 'paid'];
+      allow read: if isStaff();
+      allow update, delete: if isAdmin();
+    }
+
+    // 6. Ingressos (Tickets):
+    // CRÍTICO: Tokens de QR nunca devem ser expostos em listagens públicas.
+    // Leitura permitida para Admin e Staff (para conferência e portaria).
+    // Atualização de status para 'used' permitida apenas para Admin ou Staff autenticados na portaria.
+    match /tickets/{ticketId} {
+      allow read: if isStaff();
+      allow create: if isAdmin(); // Ingressos criados no servidor após confirmação Pix
+      allow update: if isStaff() && (
+        // Ação de Check-in na portaria: apenas status e checkedInAt/checkedInBy podem ser alterados
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedInAt', 'checkedInBy', 'checkedInByName'])
+        && request.resource.data.status == 'used'
+        && resource.data.status == 'valid' // Impede uso duplo
+      );
+      allow delete: if isAdmin();
+    }
+
+    // 7. Equipe e Controle de Acesso (RBAC)
+    match /admins/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(); // Apenas admin existente pode conceder cargo admin
+    }
+
+    match /staff/{userId} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+  }
+}

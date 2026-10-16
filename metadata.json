@@ -1,0 +1,8 @@
+{
+  "name": "VibePass - Ingressos para Balada & Scanner",
+  "description": "Sistema completo de venda de ingressos para festas e boates, com checkout Pix, painel admin, links de divulgação e scanner de portaria em tempo real.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
